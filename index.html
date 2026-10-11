@@ -153,26 +153,53 @@
     .character-wrap {
       position: absolute;
       right: 50%;
-      bottom: -3%;
+      bottom: 0;
       width: min(76%, 360px);
       height: 94%;
       display: grid;
       place-items: end center;
+      padding: 0;
+      border: 0;
+      color: inherit;
+      background: transparent;
+      cursor: crosshair;
+      touch-action: manipulation;
       transform: translateX(50%);
       transform-origin: 50% 85%;
       transition: transform .14s ease;
       will-change: transform;
     }
+    .character-wrap::before {
+      position: absolute;
+      right: 14%;
+      bottom: 1%;
+      left: 14%;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, .55);
+      filter: blur(8px);
+      content: "";
+      pointer-events: none;
+    }
     .character {
       display: block;
-      max-width: 100%;
-      max-height: 100%;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
       object-position: bottom;
       filter: drop-shadow(0 14px 18px rgba(0, 0, 0, .34));
       user-select: none;
       -webkit-user-drag: none;
     }
+    .character-reaction {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .08s ease;
+    }
+    .character-wrap.hit .character-neutral { opacity: 0; }
+    .character-wrap.hit .character-reaction { opacity: 1; }
     .character-wrap.hit { animation: recoil .34s ease-out; }
     .character-wrap.dodging { transform: translateX(50%) translateX(55px) rotate(5deg); }
     @keyframes recoil {
@@ -295,7 +322,7 @@
   <main class="page">
     <p class="eyebrow">Birthday side quest · 2 rounds</p>
     <h1>Two levels.<br>One very <span>punchable</span> birthday boy. ✨</h1>
-    <p class="lede">Tap the button for a few harmless cartoon bonks. Beat both rounds to unlock the birthday video.</p>
+    <p class="lede">Tap me or hit the button for a few harmless cartoon bonks. Beat both rounds to unlock the birthday video.</p>
 
     <section class="card" aria-label="Two-level birthday punch game">
       <div class="game-stage" id="gameStage">
@@ -309,9 +336,10 @@
         </div>
         <div class="arena" id="arena">
           <span class="arena-label" id="arenaLabel">ROUND 1 · WARM-UP</span>
-          <div class="character-wrap" id="characterWrap">
-            <img class="character" id="character" src="assets/me.png" alt="Cartoon portrait of the birthday boy" draggable="false">
-          </div>
+          <button class="character-wrap" id="characterWrap" type="button" aria-label="Punch the character">
+            <img class="character character-neutral" src="assets/me.png" alt="" draggable="false">
+            <img class="character character-reaction" src="assets/me-hit.png" alt="" draggable="false" aria-hidden="true">
+          </button>
           <div class="impact" id="impact" aria-hidden="true">POW!</div>
           <div class="dodge-note" id="dodgeNote" aria-hidden="true">He’s dodging!</div>
         </div>
@@ -363,6 +391,7 @@
     let dodgeTimer;
     let dodgeEndTimer;
     let transitionTimer;
+    let hitFaceTimer;
 
     if (YOUTUBE_URL) {
       youtubeLink.href = YOUTUBE_URL;
@@ -382,14 +411,26 @@
       levelTwoStep.style.setProperty('--progress', level === 1 ? `${(hits / current.hits) * 100}%` : '0%');
     }
 
-    function showImpact(word) {
+    function showImpact(word, clientX, clientY, reacted = true) {
+      if (Number.isFinite(clientX) && Number.isFinite(clientY)) {
+        const bounds = arena.getBoundingClientRect();
+        impact.style.left = `${clientX - bounds.left}px`;
+        impact.style.top = `${clientY - bounds.top}px`;
+      } else {
+        impact.style.left = '50%';
+        impact.style.top = '35%';
+      }
       impact.textContent = word;
       impact.classList.remove('show');
       void impact.offsetWidth;
       impact.classList.add('show');
-      characterWrap.classList.remove('hit');
-      void characterWrap.offsetWidth;
-      characterWrap.classList.add('hit');
+      if (reacted) {
+        characterWrap.classList.remove('hit');
+        void characterWrap.offsetWidth;
+        characterWrap.classList.add('hit');
+        window.clearTimeout(hitFaceTimer);
+        hitFaceTimer = window.setTimeout(() => characterWrap.classList.remove('hit'), 520);
+      }
       arena.classList.remove('shake');
       void arena.offsetWidth;
       arena.classList.add('shake');
@@ -427,18 +468,20 @@
       videoStage.classList.add('visible');
     }
 
-    punchButton.addEventListener('click', () => {
+    function punch(event) {
       if (busy) return;
+      const hitX = event?.currentTarget === characterWrap ? event.clientX : undefined;
+      const hitY = event?.currentTarget === characterWrap ? event.clientY : undefined;
       if (dodging) {
         status.textContent = 'Whoosh! He dodged that one—wait for the opening.';
-        showImpact('WHOOSH!');
+        showImpact('WHOOSH!', hitX, hitY, false);
         return;
       }
 
       busy = true;
       hits += 1;
       renderProgress();
-      showImpact(['POW!', 'BOP!', 'BONK!', 'KAPOW!'][Math.floor(Math.random() * 4)]);
+      showImpact(['POW!', 'BOP!', 'BONK!', 'KAPOW!'][Math.floor(Math.random() * 4)], hitX, hitY);
 
       if (hits >= LEVELS[level].hits) {
         if (level === 0) {
@@ -457,12 +500,16 @@
           : 'Good hit! Keep the combo going!';
         window.setTimeout(() => { busy = false; }, 280);
       }
-    });
+    }
+
+    punchButton.addEventListener('click', punch);
+    characterWrap.addEventListener('click', punch);
 
     document.querySelector('#replay').addEventListener('click', () => {
       window.clearInterval(dodgeTimer);
       window.clearTimeout(dodgeEndTimer);
       window.clearTimeout(transitionTimer);
+      window.clearTimeout(hitFaceTimer);
       level = 0;
       hits = 0;
       busy = false;
