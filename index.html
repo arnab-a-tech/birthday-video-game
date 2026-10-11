@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#160d1a">
+  <title>A Little Birthday Surprise</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #fff8fb;
+      --muted: #d7c5d4;
+      --pink: #ff5ba7;
+      --gold: #ffd75e;
+      --violet: #a98aff;
+      --panel: rgba(34, 19, 39, .88);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100svh;
+      margin: 0;
+      padding: 28px 18px;
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+      color: var(--ink);
+      font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(ellipse at 15% 10%, rgba(255, 91, 167, .25), transparent 34%),
+        radial-gradient(ellipse at 90% 85%, rgba(169, 138, 255, .21), transparent 38%),
+        #160d1a;
+    }
+
+    .page { width: min(100%, 760px); }
+    .eyebrow {
+      margin: 0 0 12px;
+      color: var(--gold);
+      font-size: .77rem;
+      font-weight: 800;
+      letter-spacing: .19em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 7vw, 3.35rem);
+      line-height: 1.05;
+      letter-spacing: -.045em;
+      text-align: center;
+    }
+    .lede {
+      max-width: 470px;
+      margin: 14px auto 25px;
+      color: var(--muted);
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    .card {
+      position: relative;
+      padding: clamp(18px, 4vw, 30px);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 28px;
+      background: var(--panel);
+      box-shadow: 0 24px 90px rgba(0, 0, 0, .35);
+      backdrop-filter: blur(14px);
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 15px;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    .counter {
+      flex: none;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 215, 94, .35);
+      border-radius: 999px;
+      color: var(--gold);
+      font-weight: 800;
+    }
+
+    .playfield {
+      position: relative;
+      height: clamp(250px, 55vw, 370px);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 22px;
+      background:
+        radial-gradient(ellipse at 50% 105%, rgba(255, 91, 167, .22), transparent 50%),
+        linear-gradient(150deg, rgba(169, 138, 255, .15), rgba(30, 16, 40, .9));
+      touch-action: manipulation;
+    }
+    .playfield::before, .playfield::after {
+      position: absolute;
+      color: rgba(255, 255, 255, .14);
+      content: "✦";
+      pointer-events: none;
+    }
+    .playfield::before { top: 19%; left: 13%; font-size: 24px; }
+    .playfield::after { right: 12%; bottom: 17%; color: rgba(255, 215, 94, .24); font-size: 32px; }
+
+    .star {
+      position: absolute;
+      display: grid;
+      width: 60px;
+      height: 60px;
+      place-items: center;
+      border: 0;
+      border-radius: 50%;
+      color: #281326;
+      background: linear-gradient(145deg, #fff2a8, var(--gold));
+      box-shadow: 0 0 0 8px rgba(255, 215, 94, .12), 0 8px 30px rgba(255, 215, 94, .24);
+      font-size: 30px;
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      animation: bob 1.5s ease-in-out infinite alternate;
+      transition: left .35s ease, top .35s ease, scale .18s ease;
+    }
+    .star:hover { scale: 1.12; }
+    .star:active { scale: .88; }
+    .star:focus-visible, button:focus-visible {
+      outline: 3px solid white;
+      outline-offset: 4px;
+    }
+    @keyframes bob { to { margin-top: -9px; } }
+
+    .hint {
+      min-height: 1.5em;
+      margin: 15px 0 0;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .video-stage { display: none; text-align: center; }
+    .video-stage.visible { display: block; animation: arrive .6s ease both; }
+    .game-stage.hidden { display: none; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .video-stage h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 5vw, 2.3rem); }
+    .video-stage p { margin: 0 0 18px; color: var(--muted); }
+    .watch-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin: 10px 0 2px;
+      padding: 14px 21px;
+      border: 0;
+      border-radius: 999px;
+      color: #281326;
+      background: linear-gradient(120deg, #fff0a1, var(--gold));
+      box-shadow: 0 8px 28px rgba(255, 215, 94, .2);
+      font-weight: 850;
+      text-decoration: none;
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .watch-link:not([aria-disabled="true"]):hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 34px rgba(255, 215, 94, .32);
+    }
+    .watch-link[aria-disabled="true"] { opacity: .62; cursor: default; }
+    .video-note { margin-top: 12px !important; font-size: .82rem; }
+    .replay {
+      margin-top: 18px;
+      padding: 10px 15px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 999px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .07);
+      font: inherit;
+      cursor: pointer;
+    }
+    .footer { margin: 18px 0 0; color: rgba(255, 248, 251, .48); font-size: .78rem; text-align: center; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <p class="eyebrow">A little birthday surprise</p>
+    <h1>One tiny game,<br>then your movie ✨</h1>
+    <p class="lede">Catch five little stars to unlock a collection of some of our favorite moments.</p>
+
+    <section class="card" aria-label="Birthday surprise">
+      <div class="game-stage" id="gameStage">
+        <div class="status-row">
+          <span>Tap the star wherever it appears</span>
+          <span class="counter" id="counter" aria-live="polite">0 / 5 ✦</span>
+        </div>
+        <div class="playfield" id="playfield" aria-label="Star-catching game">
+          <button class="star" id="star" type="button" aria-label="Catch the star">✦</button>
+        </div>
+        <p class="hint" id="hint" aria-live="polite">Ready? Catch your first star.</p>
+      </div>
+
+      <div class="video-stage" id="videoStage" aria-live="polite">
+        <h2>Every moment led to this 💛</h2>
+        <p>Happy birthday, my favorite person.</p>
+        <a class="watch-link" id="youtubeLink" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Watch the birthday video on YouTube <span aria-hidden="true">↗</span></a>
+        <p class="video-note" id="videoNote">The YouTube Shorts link will be added here once it’s published.</p>
+        <button class="replay" id="replay" type="button">Play the game again</button>
+      </div>
+    </section>
+    <p class="footer">Made with love, just for you</p>
+  </main>
+
+  <script>
+    const GOAL = 5;
+    const playfield = document.querySelector('#playfield');
+    const star = document.querySelector('#star');
+    const counter = document.querySelector('#counter');
+    const hint = document.querySelector('#hint');
+    const gameStage = document.querySelector('#gameStage');
+    const videoStage = document.querySelector('#videoStage');
+    const videoNote = document.querySelector('#videoNote');
+    const youtubeLink = document.querySelector('#youtubeLink');
+    // Paste the published YouTube Shorts URL here, for example:
+    // const YOUTUBE_URL = 'https://www.youtube.com/shorts/your-video-id';
+    const YOUTUBE_URL = '';
+
+    if (YOUTUBE_URL) {
+      youtubeLink.href = YOUTUBE_URL;
+      youtubeLink.removeAttribute('aria-disabled');
+      videoNote.hidden = true;
+    }
+    let caught = 0;
+
+    function moveStar() {
+      const edge = 13;
+      star.style.left = `${edge + Math.random() * (100 - edge * 2)}%`;
+      star.style.top = `${edge + Math.random() * (100 - edge * 2)}%`;
+    }
+
+    function resetGame() {
+      caught = 0;
+      counter.textContent = `0 / ${GOAL} ✦`;
+      hint.textContent = 'Ready? Catch your first star.';
+      gameStage.classList.remove('hidden');
+      videoStage.classList.remove('visible');
+      moveStar();
+    }
+
+    star.addEventListener('click', () => {
+      caught += 1;
+      counter.textContent = `${caught} / ${GOAL} ✦`;
+      if (caught >= GOAL) {
+        gameStage.classList.add('hidden');
+        videoStage.classList.add('visible');
+        return;
+      }
+      hint.textContent = ['Nice catch!', 'You’re on a roll!', 'Another little memory…', 'Almost there!'][caught - 1];
+      moveStar();
+    });
+
+    document.querySelector('#replay').addEventListener('click', resetGame);
+    window.addEventListener('resize', moveStar);
+    moveStar();
+  </script>
+</body>
+</html>
