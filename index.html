@@ -138,6 +138,7 @@
       transform: translate(-50%, -50%);
       will-change: left, top;
     }
+    .face-target.hidden { display: none; }
     .face-target.hit { animation: target-hit .32s ease-out; }
     @keyframes target-hit {
       25% { scale: .88; rotate: -7deg; }
@@ -255,6 +256,7 @@
     }
     .controls { flex: none; padding-top: 12px; }
     .aim-control { padding: 0 2px 3px; }
+    .aim-control[hidden] { display: none; }
     .aim-label {
       display: flex;
       justify-content: space-between;
@@ -320,6 +322,10 @@
     .throw-button:active { transform: translateY(4px); box-shadow: 0 3px 0 #b88c25; }
     button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
     .instructions { margin: 9px 0 0; color: var(--muted); font-size: .72rem; text-align: center; }
+    .range.tap-mode .aim-line,
+    .range.tap-mode .projectile,
+    .range.tap-mode .ground,
+    .range.tap-mode .launcher { display: none; }
     .finish {
       position: absolute;
       z-index: 10;
@@ -373,16 +379,16 @@
       <header class="top">
         <p class="eyebrow">Birthday arrow challenge</p>
         <h1>Catch that<br>happy face! 🎯</h1>
-        <p class="subtitle">Wait for the moving face, then fire from the ground.</p>
+        <p class="subtitle" id="subtitle">Tap his face before it disappears!</p>
       </header>
       <div class="score-row">
-        <span class="pill" id="levelLabel">LEVEL 1 · SLOW DRIFT</span>
+        <span class="pill" id="levelLabel">LEVEL 1 · QUICK TAP</span>
         <span class="score">SCORE <strong id="score">0</strong></span>
       </div>
-      <section class="range" id="range" aria-label="Vertical arrow game">
-        <span class="sky-hint">Time your shot · hit = 1 · miss = 0</span>
+      <section class="range tap-mode" id="range" aria-label="Tap the face before it disappears">
+        <span class="sky-hint" id="skyHint">Tap when he pops up!</span>
         <div class="aim-line" aria-hidden="true"></div>
-        <button class="face-target" id="faceTarget" type="button" aria-label="Moving happy face target">
+        <button class="face-target hidden" id="faceTarget" type="button" aria-label="Tap the briefly appearing face">
           <img class="face-image active" data-mood="happy" src="assets/me-happy.png" alt="" draggable="false">
           <img class="face-image" data-mood="sad" src="assets/me-sad.png" alt="" draggable="false">
           <img class="face-image" data-mood="evil" src="assets/me-evil.png" alt="" draggable="false">
@@ -399,15 +405,15 @@
         <div class="launcher" aria-hidden="true"></div>
       </section>
       <div class="controls">
-        <div class="aim-control">
+        <div class="aim-control" id="aimControl" hidden>
           <label class="aim-label" for="aimSlider"><span>Arrow direction</span><span class="aim-value" id="aimValue">CENTER</span></label>
           <input class="aim-slider" id="aimSlider" type="range" min="-28" max="28" value="0" step="1" aria-label="Change arrow direction">
         </div>
         <div class="result-row">
-          <span id="roundProgress">Hits to next level: 0 / 3</span>
+          <span id="roundProgress">Quick taps: 0 / 3</span>
           <span class="last-shot" id="lastShot" aria-live="polite">Ready</span>
         </div>
-        <p class="instructions">Slide to aim; release to fire. Hit = 1 · miss = 0.</p>
+        <p class="instructions" id="instructions">Tap his face before it disappears!</p>
       </div>
     </div>
     <div class="finish" id="finish" hidden>
@@ -424,7 +430,7 @@
   </main>
   <script>
     const LEVELS = [
-      { label: 'LEVEL 1 · SLOW DRIFT', hitsNeeded: 3, speed: 1.05 },
+      { label: 'LEVEL 1 · QUICK TAP', hitsNeeded: 3, speed: 1.05 },
       { label: 'LEVEL 2 · QUICK SWERVE', hitsNeeded: 5, speed: 1.65 }
     ];
     const YOUTUBE_URL = 'https://youtu.be/WpNvQiIxHNY';
@@ -436,6 +442,10 @@
     const levelLabel = document.querySelector('#levelLabel');
     const roundProgress = document.querySelector('#roundProgress');
     const lastShot = document.querySelector('#lastShot');
+    const subtitle = document.querySelector('#subtitle');
+    const skyHint = document.querySelector('#skyHint');
+    const instructions = document.querySelector('#instructions');
+    const aimControl = document.querySelector('#aimControl');
     const aimSlider = document.querySelector('#aimSlider');
     const aimValue = document.querySelector('#aimValue');
     const finish = document.querySelector('#finish');
@@ -456,6 +466,10 @@
     let targetX = 0.5;
     let targetY = 0.28;
     let nextReaction = 'sad';
+    let tapWindowActive = false;
+    let roundLocked = false;
+    let tapTimer;
+    let popTimer;
 
     if (YOUTUBE_URL) {
       youtubeLink.href = YOUTUBE_URL;
@@ -469,9 +483,53 @@
       if (mood !== 'happy') moodTimer = window.setTimeout(() => setMood('happy', 0), duration);
     }
 
-    function announceShot(hit) {
+    function setLevelMode() {
+      const tapMode = level === 0;
+      range.classList.toggle('tap-mode', tapMode);
+      range.setAttribute('aria-label', tapMode ? 'Tap the face before it disappears' : 'Vertical arrow game');
+      aimControl.hidden = tapMode;
+      aimSlider.disabled = tapMode;
+      target.classList.toggle('hidden', tapMode);
+      target.setAttribute('aria-label', tapMode ? 'Tap the briefly appearing face' : 'Moving face arrow target');
+      subtitle.textContent = tapMode ? 'Tap his face before it disappears!' : 'Aim from the ground and release to fire!';
+      skyHint.textContent = tapMode ? 'Tap when he pops up!' : 'Time your shot · hit = 1 · miss = 0';
+      instructions.textContent = tapMode ? 'Quick! He only stays for a moment.' : 'Slide to aim; release to fire. Hit = 1 · miss = 0.';
+      roundProgress.textContent = `${tapMode ? 'Quick taps' : 'Hits to next level'}: ${levelHits} / ${LEVELS[level].hitsNeeded}`;
+      lastShot.textContent = tapMode ? 'Waiting for him…' : 'Ready';
+    }
+
+    function scheduleTapFace() {
+      if (level !== 0 || roundLocked || !finish.hidden) return;
+      window.clearTimeout(popTimer);
+      popTimer = window.setTimeout(() => {
+        if (level !== 0 || roundLocked || !finish.hidden) return;
+        const bounds = range.getBoundingClientRect();
+        const insetX = Math.min(0.42, parseFloat(getComputedStyle(target).width) / bounds.width / 2 + 0.04);
+        const x = insetX + Math.random() * (1 - insetX * 2);
+        const y = 0.22 + Math.random() * 0.55;
+        target.style.left = `${x * 100}%`;
+        target.style.top = `${y * 100}%`;
+        target.classList.remove('hidden');
+        tapWindowActive = true;
+        lastShot.textContent = 'Tap now!';
+        tapTimer = window.setTimeout(() => {
+          if (tapWindowActive && level === 0) recordRound(false);
+        }, 480);
+      }, 650 + Math.random() * 800);
+    }
+
+    function recordRound(hit) {
+      if ((roundLocked && !(level === 1 && shot)) || !finish.hidden) return;
+      roundLocked = true;
+      tapWindowActive = false;
+      window.clearTimeout(tapTimer);
+      if (level === 0) {
+        target.classList.add('hidden');
+      } else {
+        shot = null;
+        projectile.classList.remove('flying');
+      }
       shot = null;
-      projectile.classList.remove('flying');
       const current = LEVELS[level];
       if (hit) {
         score += 1;
@@ -505,23 +563,28 @@
             level = 1;
             levelHits = 0;
             levelLabel.textContent = LEVELS[level].label;
-            roundProgress.textContent = `Hits to next level: 0 / ${LEVELS[level].hitsNeeded}`;
-            lastShot.textContent = 'Quick swerve starts!';
-            aimSlider.disabled = false;
+            startTime = performance.now();
+            roundLocked = false;
+            setLevelMode();
           } else {
             finalScore.textContent = score;
             finish.hidden = false;
           }
         }, 950);
       } else {
-        window.setTimeout(() => { aimSlider.disabled = false; }, 480);
+        window.setTimeout(() => {
+          roundLocked = false;
+          if (level === 0) scheduleTapFace();
+          else aimSlider.disabled = false;
+        }, 480);
       }
     }
 
     function fire() {
-      if (shot || aimSlider.disabled || !finish.hidden) return;
+      if (level !== 1 || roundLocked || shot || aimSlider.disabled || !finish.hidden) return;
       lastShot.textContent = 'Arrow away…';
       shot = { started: performance.now(), duration: 650, angle: Number(aimSlider.value), hit: false };
+      roundLocked = true;
       aimSlider.disabled = true;
       projectile.classList.add('flying');
     }
@@ -536,10 +599,12 @@
     function frame(now) {
       const elapsed = (now - startTime) / 1000;
       const speed = LEVELS[level].speed;
-      targetX = 0.5 + Math.sin(elapsed * speed) * 0.36;
-      targetY = 0.28 + Math.sin(elapsed * 1.55) * 0.055;
-      target.style.left = `${targetX * 100}%`;
-      target.style.top = `${targetY * 100}%`;
+      if (level === 1) {
+        targetX = 0.5 + Math.sin(elapsed * speed) * 0.36;
+        targetY = 0.28 + Math.sin(elapsed * 1.55) * 0.055;
+        target.style.left = `${targetX * 100}%`;
+        target.style.top = `${targetY * 100}%`;
+      }
 
       if (shot) {
         const progress = Math.min(1, (now - shot.started) / shot.duration);
@@ -554,9 +619,9 @@
         const faceCenterX = width * targetX;
         const faceCenterY = height * targetY;
         if (Math.abs(arrowX - faceCenterX) < faceSize * 0.38 && Math.abs(arrowY - faceCenterY) < faceSize * 0.4) {
-          announceShot(true);
+          recordRound(true);
         } else if (progress >= 1) {
-          announceShot(false);
+          recordRound(false);
         }
       }
       lastFrame = now;
@@ -568,22 +633,34 @@
     aimSlider.addEventListener('keyup', event => {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(event.key)) fire();
     });
-    target.addEventListener('click', event => { event.preventDefault(); });
+    target.addEventListener('pointerdown', event => {
+      if (level === 0) event.stopPropagation();
+    });
+    target.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (level === 0) recordRound(tapWindowActive);
+    });
+    range.addEventListener('pointerdown', event => {
+      if (level === 0 && !target.contains(event.target)) recordRound(false);
+    });
     document.querySelector('#replayButton').addEventListener('click', () => {
       window.clearTimeout(transitionTimer);
       window.clearTimeout(moodTimer);
+      window.clearTimeout(popTimer);
+      window.clearTimeout(tapTimer);
       level = 0;
       score = 0;
       levelHits = 0;
       shot = null;
+      roundLocked = false;
+      tapWindowActive = false;
       startTime = performance.now();
       target.classList.remove('hit');
       setMood('happy', 0);
       scoreLabel.textContent = '0';
       levelLabel.textContent = LEVELS[0].label;
-      roundProgress.textContent = `Hits to next level: 0 / ${LEVELS[0].hitsNeeded}`;
-      lastShot.textContent = 'Ready';
-      aimSlider.disabled = false;
+      setLevelMode();
       projectile.classList.remove('flying');
       aimSlider.value = '0';
       updateAim();
@@ -591,6 +668,8 @@
     });
 
     updateAim();
+    setLevelMode();
+    scheduleTapFace();
     requestAnimationFrame(frame);
   </script>
 </body>
