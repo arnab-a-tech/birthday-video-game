@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#160d1a">
-  <title>A Little Birthday Surprise</title>
+  <title>Birthday Punch-Out!</title>
   <style>
     :root {
       color-scheme: dark;
@@ -12,12 +12,11 @@
       --muted: #d7c5d4;
       --pink: #ff5ba7;
       --gold: #ffd75e;
+      --cyan: #66e1f4;
       --violet: #a98aff;
-      --panel: rgba(34, 19, 39, .88);
+      --panel: rgba(34, 19, 39, .9);
     }
-
     * { box-sizing: border-box; }
-
     body {
       min-height: 100svh;
       margin: 0;
@@ -28,39 +27,39 @@
       color: var(--ink);
       font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, sans-serif;
       background:
-        radial-gradient(ellipse at 15% 10%, rgba(255, 91, 167, .25), transparent 34%),
-        radial-gradient(ellipse at 90% 85%, rgba(169, 138, 255, .21), transparent 38%),
+        radial-gradient(ellipse at 12% 8%, rgba(255, 91, 167, .24), transparent 35%),
+        radial-gradient(ellipse at 90% 88%, rgba(169, 138, 255, .2), transparent 38%),
         #160d1a;
     }
-
+    button { font: inherit; }
     .page { width: min(100%, 760px); }
     .eyebrow {
       margin: 0 0 12px;
       color: var(--gold);
-      font-size: .77rem;
-      font-weight: 800;
-      letter-spacing: .19em;
+      font-size: .76rem;
+      font-weight: 850;
+      letter-spacing: .2em;
       text-align: center;
       text-transform: uppercase;
     }
     h1 {
       margin: 0;
-      font-size: clamp(2rem, 7vw, 3.35rem);
-      line-height: 1.05;
-      letter-spacing: -.045em;
+      font-size: clamp(2.1rem, 7vw, 3.6rem);
+      line-height: 1.02;
+      letter-spacing: -.05em;
       text-align: center;
     }
+    h1 span { color: var(--pink); }
     .lede {
-      max-width: 470px;
+      max-width: 490px;
       margin: 14px auto 25px;
       color: var(--muted);
       line-height: 1.55;
       text-align: center;
     }
-
     .card {
       position: relative;
-      padding: clamp(18px, 4vw, 30px);
+      padding: clamp(16px, 4vw, 28px);
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, .14);
       border-radius: 28px;
@@ -68,82 +67,191 @@
       box-shadow: 0 24px 90px rgba(0, 0, 0, .35);
       backdrop-filter: blur(14px);
     }
-
-    .status-row {
+    .game-stage[hidden], .video-stage[hidden] { display: none; }
+    .game-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin-bottom: 15px;
-      color: var(--muted);
-      font-size: .9rem;
+      margin-bottom: 14px;
     }
-    .counter {
-      flex: none;
+    .level-badge, .hit-count {
       padding: 8px 12px;
-      border: 1px solid rgba(255, 215, 94, .35);
+      border: 1px solid rgba(255, 255, 255, .16);
       border-radius: 999px;
-      color: var(--gold);
-      font-weight: 800;
+      font-size: .85rem;
+      font-weight: 850;
     }
-
-    .playfield {
-      position: relative;
-      height: clamp(250px, 55vw, 370px);
+    .level-badge { color: var(--cyan); letter-spacing: .08em; }
+    .hit-count { color: var(--gold); }
+    .level-track { display: flex; gap: 8px; margin: 0 0 14px; }
+    .level-step {
+      flex: 1;
+      height: 7px;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .12);
+    }
+    .level-step::after {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--pink), var(--gold));
+      content: "";
+      transition: width .28s ease;
+    }
+    .level-step.active::after { width: var(--progress, 12%); }
+    .level-step.done::after { width: 100%; }
+    .arena {
+      position: relative;
+      height: clamp(300px, 72vw, 440px);
+      overflow: hidden;
+      isolation: isolate;
+      border: 1px solid rgba(255, 255, 255, .18);
       border-radius: 22px;
       background:
-        radial-gradient(ellipse at 50% 105%, rgba(255, 91, 167, .22), transparent 50%),
-        linear-gradient(150deg, rgba(169, 138, 255, .15), rgba(30, 16, 40, .9));
+        radial-gradient(ellipse at 50% 92%, rgba(255, 91, 167, .32), transparent 48%),
+        radial-gradient(ellipse at 50% 15%, rgba(255, 215, 94, .17), transparent 52%),
+        linear-gradient(145deg, #322042, #1b1225 65%, #281632);
+    }
+    .arena::before {
+      position: absolute;
+      z-index: -1;
+      right: 10%;
+      bottom: -33%;
+      left: 10%;
+      height: 75%;
+      border: 2px solid rgba(255, 255, 255, .14);
+      border-radius: 50%;
+      box-shadow: 0 0 0 28px rgba(255, 255, 255, .035), 0 0 0 56px rgba(255, 255, 255, .025);
+      content: "";
+    }
+    .arena::after {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      opacity: .35;
+      background-image: radial-gradient(rgba(255,255,255,.5) 1px, transparent 1.5px);
+      background-size: 31px 31px;
+      content: "";
+      mask-image: linear-gradient(to bottom, black, transparent 80%);
+    }
+    .arena-label {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 2;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, .17);
+      border-radius: 999px;
+      color: var(--ink);
+      background: rgba(22, 13, 26, .56);
+      font-size: .78rem;
+      font-weight: 800;
+    }
+    .character-wrap {
+      position: absolute;
+      right: 50%;
+      bottom: -3%;
+      width: min(76%, 360px);
+      height: 94%;
+      display: grid;
+      place-items: end center;
+      transform: translateX(50%);
+      transform-origin: 50% 85%;
+      transition: transform .14s ease;
+      will-change: transform;
+    }
+    .character {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      object-position: bottom;
+      filter: drop-shadow(0 14px 18px rgba(0, 0, 0, .34));
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    .character-wrap.hit { animation: recoil .34s ease-out; }
+    .character-wrap.dodging { transform: translateX(50%) translateX(55px) rotate(5deg); }
+    @keyframes recoil {
+      20% { transform: translateX(50%) translateX(-20px) rotate(-5deg); }
+      55% { transform: translateX(50%) translateX(12px) rotate(3deg); }
+    }
+    .arena.shake { animation: arena-shake .22s ease-in-out; }
+    @keyframes arena-shake {
+      25% { transform: translateX(-5px) rotate(-.35deg); }
+      75% { transform: translateX(5px) rotate(.35deg); }
+    }
+    .impact {
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      z-index: 3;
+      padding: 9px 15px;
+      border: 3px solid #fff;
+      border-radius: 50% 45% 48% 42%;
+      color: #281326;
+      background: var(--gold);
+      box-shadow: 4px 5px 0 var(--pink);
+      font-size: clamp(1.25rem, 4vw, 2rem);
+      font-weight: 1000;
+      letter-spacing: .04em;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 12px) rotate(-12deg) scale(.5);
+    }
+    .impact.show { animation: pow .48s cubic-bezier(.2,.9,.3,1.3) both; }
+    @keyframes pow {
+      18% { opacity: 1; transform: translate(-50%, -8px) rotate(9deg) scale(1.12); }
+      72% { opacity: 1; }
+      to { opacity: 0; transform: translate(-50%, -27px) rotate(14deg) scale(.85); }
+    }
+    .dodge-note {
+      position: absolute;
+      top: 62px;
+      left: 50%;
+      z-index: 4;
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: #281326;
+      background: var(--cyan);
+      font-size: .78rem;
+      font-weight: 900;
+      opacity: 0;
+      transform: translateX(-50%) translateY(-5px);
+      transition: opacity .15s, transform .15s;
+    }
+    .dodge-note.show { opacity: 1; transform: translateX(-50%); }
+    .fight-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding-top: 16px;
+    }
+    .status { min-height: 1.5em; margin: 0; color: var(--muted); line-height: 1.4; }
+    .punch-button {
+      flex: none;
+      min-width: 170px;
+      padding: 15px 22px;
+      border: 0;
+      border-radius: 999px;
+      color: #281326;
+      background: linear-gradient(120deg, #fff0a1, var(--gold));
+      box-shadow: 0 8px 28px rgba(255, 215, 94, .23), inset 0 -3px 0 rgba(148, 91, 0, .14);
+      font-size: 1.02rem;
+      font-weight: 950;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease;
       touch-action: manipulation;
     }
-    .playfield::before, .playfield::after {
-      position: absolute;
-      color: rgba(255, 255, 255, .14);
-      content: "✦";
-      pointer-events: none;
-    }
-    .playfield::before { top: 19%; left: 13%; font-size: 24px; }
-    .playfield::after { right: 12%; bottom: 17%; color: rgba(255, 215, 94, .24); font-size: 32px; }
-
-    .star {
-      position: absolute;
-      display: grid;
-      width: 60px;
-      height: 60px;
-      place-items: center;
-      border: 0;
-      border-radius: 50%;
-      color: #281326;
-      background: linear-gradient(145deg, #fff2a8, var(--gold));
-      box-shadow: 0 0 0 8px rgba(255, 215, 94, .12), 0 8px 30px rgba(255, 215, 94, .24);
-      font-size: 30px;
-      cursor: pointer;
-      transform: translate(-50%, -50%);
-      animation: bob 1.5s ease-in-out infinite alternate;
-      transition: left .35s ease, top .35s ease, scale .18s ease;
-    }
-    .star:hover { scale: 1.12; }
-    .star:active { scale: .88; }
-    .star:focus-visible, button:focus-visible {
-      outline: 3px solid white;
-      outline-offset: 4px;
-    }
-    @keyframes bob { to { margin-top: -9px; } }
-
-    .hint {
-      min-height: 1.5em;
-      margin: 15px 0 0;
-      color: var(--muted);
-      text-align: center;
-    }
-
-    .video-stage { display: none; text-align: center; }
-    .video-stage.visible { display: block; animation: arrive .6s ease both; }
-    .game-stage.hidden { display: none; }
-    @keyframes arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
-    .video-stage h2 { margin: 0 0 10px; font-size: clamp(1.6rem, 5vw, 2.3rem); }
+    .punch-button:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(255, 215, 94, .32); }
+    .punch-button:active { transform: scale(.95); }
+    button:focus-visible { outline: 3px solid white; outline-offset: 4px; }
+    .video-stage { padding: 30px 8px 16px; text-align: center; }
+    .video-stage h2 { margin: 0 0 10px; font-size: clamp(1.7rem, 5vw, 2.5rem); }
     .video-stage p { margin: 0 0 18px; color: var(--muted); }
     .watch-link {
       display: inline-flex;
@@ -151,18 +259,12 @@
       gap: 9px;
       margin: 10px 0 2px;
       padding: 14px 21px;
-      border: 0;
       border-radius: 999px;
       color: #281326;
       background: linear-gradient(120deg, #fff0a1, var(--gold));
       box-shadow: 0 8px 28px rgba(255, 215, 94, .2);
-      font-weight: 850;
+      font-weight: 900;
       text-decoration: none;
-      transition: transform .18s ease, box-shadow .18s ease;
-    }
-    .watch-link:not([aria-disabled="true"]):hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 34px rgba(255, 215, 94, .32);
     }
     .watch-link[aria-disabled="true"] { opacity: .62; cursor: default; }
     .video-note { margin-top: 12px !important; font-size: .82rem; }
@@ -173,11 +275,17 @@
       border-radius: 999px;
       color: var(--ink);
       background: rgba(255, 255, 255, .07);
-      font: inherit;
       cursor: pointer;
     }
     .footer { margin: 18px 0 0; color: rgba(255, 248, 251, .48); font-size: .78rem; text-align: center; }
-
+    @media (max-width: 560px) {
+      body { padding: 22px 13px; }
+      .fight-controls { align-items: stretch; flex-direction: column; }
+      .status { text-align: center; }
+      .punch-button { width: 100%; }
+      .character-wrap { width: 86%; }
+      .arena-label { top: 12px; left: 12px; }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
     }
@@ -185,84 +293,189 @@
 </head>
 <body>
   <main class="page">
-    <p class="eyebrow">A little birthday surprise</p>
-    <h1>One tiny game,<br>then your movie ✨</h1>
-    <p class="lede">Catch five little stars to unlock a collection of some of our favorite moments.</p>
+    <p class="eyebrow">Birthday side quest · 2 rounds</p>
+    <h1>Two levels.<br>One very <span>punchable</span> birthday boy. ✨</h1>
+    <p class="lede">Tap the button for a few harmless cartoon bonks. Beat both rounds to unlock the birthday video.</p>
 
-    <section class="card" aria-label="Birthday surprise">
+    <section class="card" aria-label="Two-level birthday punch game">
       <div class="game-stage" id="gameStage">
-        <div class="status-row">
-          <span>Tap the star wherever it appears</span>
-          <span class="counter" id="counter" aria-live="polite">0 / 5 ✦</span>
+        <div class="game-top">
+          <span class="level-badge" id="levelLabel">LEVEL 1 / 2 · WARM-UP</span>
+          <span class="hit-count" id="hitCount" aria-live="polite">0 / 5 hits</span>
         </div>
-        <div class="playfield" id="playfield" aria-label="Star-catching game">
-          <button class="star" id="star" type="button" aria-label="Catch the star">✦</button>
+        <div class="level-track" aria-label="Level progress">
+          <span class="level-step active" id="levelOneStep" style="--progress: 0%"></span>
+          <span class="level-step" id="levelTwoStep"></span>
         </div>
-        <p class="hint" id="hint" aria-live="polite">Ready? Catch your first star.</p>
+        <div class="arena" id="arena">
+          <span class="arena-label" id="arenaLabel">ROUND 1 · WARM-UP</span>
+          <div class="character-wrap" id="characterWrap">
+            <img class="character" id="character" src="assets/me.png" alt="Cartoon portrait of the birthday boy" draggable="false">
+          </div>
+          <div class="impact" id="impact" aria-hidden="true">POW!</div>
+          <div class="dodge-note" id="dodgeNote" aria-hidden="true">He’s dodging!</div>
+        </div>
+        <div class="fight-controls">
+          <p class="status" id="status" aria-live="polite">Ready? Land 5 playful punches to clear the warm-up.</p>
+          <button class="punch-button" id="punchButton" type="button">👊 PUNCH!</button>
+        </div>
       </div>
 
-      <div class="video-stage" id="videoStage" aria-live="polite">
-        <h2>Every moment led to this 💛</h2>
-        <p>Happy birthday, my favorite person.</p>
+      <div class="video-stage" id="videoStage" aria-live="polite" hidden>
+        <h2>You win! 🏆</h2>
+        <p>Two rounds down. Your birthday surprise is ready.</p>
         <a class="watch-link" id="youtubeLink" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">Watch the birthday video on YouTube <span aria-hidden="true">↗</span></a>
         <p class="video-note" id="videoNote">The YouTube Shorts link will be added here once it’s published.</p>
-        <button class="replay" id="replay" type="button">Play the game again</button>
+        <button class="replay" id="replay" type="button">Run it back</button>
       </div>
     </section>
-    <p class="footer">Made with love, just for you</p>
+    <p class="footer">Made with love, just for you 💛</p>
   </main>
 
   <script>
-    const GOAL = 5;
-    const playfield = document.querySelector('#playfield');
-    const star = document.querySelector('#star');
-    const counter = document.querySelector('#counter');
-    const hint = document.querySelector('#hint');
+    const LEVELS = [
+      { name: 'WARM-UP', hits: 5, label: 'ROUND 1 · WARM-UP' },
+      { name: 'PARTY BOSS', hits: 8, label: 'ROUND 2 · PARTY BOSS' }
+    ];
+    // Paste the published YouTube Shorts URL here when it is ready.
+    const YOUTUBE_URL = '';
+
     const gameStage = document.querySelector('#gameStage');
     const videoStage = document.querySelector('#videoStage');
-    const videoNote = document.querySelector('#videoNote');
+    const levelLabel = document.querySelector('#levelLabel');
+    const hitCount = document.querySelector('#hitCount');
+    const levelOneStep = document.querySelector('#levelOneStep');
+    const levelTwoStep = document.querySelector('#levelTwoStep');
+    const arena = document.querySelector('#arena');
+    const arenaLabel = document.querySelector('#arenaLabel');
+    const characterWrap = document.querySelector('#characterWrap');
+    const impact = document.querySelector('#impact');
+    const dodgeNote = document.querySelector('#dodgeNote');
+    const status = document.querySelector('#status');
+    const punchButton = document.querySelector('#punchButton');
     const youtubeLink = document.querySelector('#youtubeLink');
-    // Paste the published YouTube Shorts URL here, for example:
-    // const YOUTUBE_URL = 'https://www.youtube.com/shorts/your-video-id';
-    const YOUTUBE_URL = '';
+    const videoNote = document.querySelector('#videoNote');
+
+    let level = 0;
+    let hits = 0;
+    let busy = false;
+    let dodging = false;
+    let dodgeTimer;
+    let dodgeEndTimer;
+    let transitionTimer;
 
     if (YOUTUBE_URL) {
       youtubeLink.href = YOUTUBE_URL;
       youtubeLink.removeAttribute('aria-disabled');
       videoNote.hidden = true;
     }
-    let caught = 0;
 
-    function moveStar() {
-      const edge = 13;
-      star.style.left = `${edge + Math.random() * (100 - edge * 2)}%`;
-      star.style.top = `${edge + Math.random() * (100 - edge * 2)}%`;
+    function renderProgress() {
+      const current = LEVELS[level];
+      levelLabel.textContent = `LEVEL ${level + 1} / 2 · ${current.name}`;
+      arenaLabel.textContent = current.label;
+      hitCount.textContent = `${hits} / ${current.hits} hits`;
+      levelOneStep.classList.toggle('done', level > 0);
+      levelOneStep.classList.toggle('active', level === 0);
+      levelOneStep.style.setProperty('--progress', level === 0 ? `${(hits / current.hits) * 100}%` : '100%');
+      levelTwoStep.classList.toggle('active', level === 1);
+      levelTwoStep.style.setProperty('--progress', level === 1 ? `${(hits / current.hits) * 100}%` : '0%');
     }
 
-    function resetGame() {
-      caught = 0;
-      counter.textContent = `0 / ${GOAL} ✦`;
-      hint.textContent = 'Ready? Catch your first star.';
-      gameStage.classList.remove('hidden');
-      videoStage.classList.remove('visible');
-      moveStar();
+    function showImpact(word) {
+      impact.textContent = word;
+      impact.classList.remove('show');
+      void impact.offsetWidth;
+      impact.classList.add('show');
+      characterWrap.classList.remove('hit');
+      void characterWrap.offsetWidth;
+      characterWrap.classList.add('hit');
+      arena.classList.remove('shake');
+      void arena.offsetWidth;
+      arena.classList.add('shake');
     }
 
-    star.addEventListener('click', () => {
-      caught += 1;
-      counter.textContent = `${caught} / ${GOAL} ✦`;
-      if (caught >= GOAL) {
-        gameStage.classList.add('hidden');
-        videoStage.classList.add('visible');
+    function startDodging() {
+      if (level !== 1 || videoStage.hidden) return;
+      dodging = true;
+      characterWrap.classList.add('dodging');
+      dodgeNote.classList.add('show');
+      status.textContent = 'He’s weaving! Wait for him to come back into range.';
+      window.clearTimeout(dodgeEndTimer);
+      dodgeEndTimer = window.setTimeout(() => {
+        dodging = false;
+        characterWrap.classList.remove('dodging');
+        dodgeNote.classList.remove('show');
+        status.textContent = 'There’s your opening—land a hit!';
+      }, 850);
+    }
+
+    function startLevelTwo() {
+      level = 1;
+      hits = 0;
+      busy = false;
+      renderProgress();
+      status.textContent = 'Party boss mode! Land 8 hits—and watch out for the dodges.';
+      dodgeTimer = window.setInterval(startDodging, 2300);
+    }
+
+    function finishGame() {
+      window.clearInterval(dodgeTimer);
+      window.clearTimeout(dodgeEndTimer);
+      gameStage.hidden = true;
+      videoStage.hidden = false;
+      videoStage.classList.add('visible');
+    }
+
+    punchButton.addEventListener('click', () => {
+      if (busy) return;
+      if (dodging) {
+        status.textContent = 'Whoosh! He dodged that one—wait for the opening.';
+        showImpact('WHOOSH!');
         return;
       }
-      hint.textContent = ['Nice catch!', 'You’re on a roll!', 'Another little memory…', 'Almost there!'][caught - 1];
-      moveStar();
+
+      busy = true;
+      hits += 1;
+      renderProgress();
+      showImpact(['POW!', 'BOP!', 'BONK!', 'KAPOW!'][Math.floor(Math.random() * 4)]);
+
+      if (hits >= LEVELS[level].hits) {
+        if (level === 0) {
+          levelOneStep.classList.add('done');
+          status.textContent = 'Warm-up cleared! Get ready for the party boss…';
+          window.clearTimeout(transitionTimer);
+          transitionTimer = window.setTimeout(startLevelTwo, 950);
+        } else {
+          status.textContent = 'Party boss defeated! Birthday surprise unlocked!';
+          window.clearTimeout(transitionTimer);
+          transitionTimer = window.setTimeout(finishGame, 750);
+        }
+      } else {
+        status.textContent = level === 0
+          ? ['Nice one!', 'That one had birthday energy!', 'He’s still standing!', 'Almost through the warm-up!'][Math.floor(Math.random() * 4)]
+          : 'Good hit! Keep the combo going!';
+        window.setTimeout(() => { busy = false; }, 280);
+      }
     });
 
-    document.querySelector('#replay').addEventListener('click', resetGame);
-    window.addEventListener('resize', moveStar);
-    moveStar();
+    document.querySelector('#replay').addEventListener('click', () => {
+      window.clearInterval(dodgeTimer);
+      window.clearTimeout(dodgeEndTimer);
+      window.clearTimeout(transitionTimer);
+      level = 0;
+      hits = 0;
+      busy = false;
+      dodging = false;
+      characterWrap.classList.remove('dodging', 'hit');
+      videoStage.hidden = true;
+      videoStage.classList.remove('visible');
+      gameStage.hidden = false;
+      status.textContent = 'Ready? Land 5 playful punches to clear the warm-up.';
+      renderProgress();
+    });
+
+    renderProgress();
   </script>
 </body>
 </html>
