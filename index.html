@@ -126,7 +126,7 @@
     .face-target {
       position: absolute;
       z-index: 2;
-      width: clamp(88px, 26vw, 116px);
+      width: clamp(66px, 19vw, 84px);
       aspect-ratio: 1;
       padding: 0;
       overflow: hidden;
@@ -268,7 +268,7 @@
     .aim-value { color: var(--gold); }
     .aim-slider {
       width: 100%;
-      height: 24px;
+      height: 36px;
       margin: 0;
       appearance: none;
       background: transparent;
@@ -407,8 +407,7 @@
           <span id="roundProgress">Hits to next level: 0 / 3</span>
           <span class="last-shot" id="lastShot" aria-live="polite">Ready</span>
         </div>
-        <button class="throw-button" id="throwButton" type="button">🏹 THROW ARROW</button>
-        <p class="instructions">Slide to aim, then throw when his face crosses the dotted path.</p>
+        <p class="instructions">Slide to aim; release to fire. Hit = 1 · miss = 0.</p>
       </div>
     </div>
     <div class="finish" id="finish" hidden>
@@ -428,7 +427,7 @@
       { label: 'LEVEL 1 · SLOW DRIFT', hitsNeeded: 3, speed: 1.05 },
       { label: 'LEVEL 2 · QUICK SWERVE', hitsNeeded: 5, speed: 1.65 }
     ];
-    const YOUTUBE_URL = '';
+    const YOUTUBE_URL = 'https://youtu.be/WpNvQiIxHNY';
     const range = document.querySelector('#range');
     const target = document.querySelector('#faceTarget');
     const projectile = document.querySelector('#projectile');
@@ -437,7 +436,6 @@
     const levelLabel = document.querySelector('#levelLabel');
     const roundProgress = document.querySelector('#roundProgress');
     const lastShot = document.querySelector('#lastShot');
-    const throwButton = document.querySelector('#throwButton');
     const aimSlider = document.querySelector('#aimSlider');
     const aimValue = document.querySelector('#aimValue');
     const finish = document.querySelector('#finish');
@@ -498,7 +496,7 @@
       feedback.classList.add('show');
       window.clearTimeout(feedbackTimer);
       feedbackTimer = window.setTimeout(() => { feedback.className = 'feedback'; }, 850);
-      throwButton.disabled = true;
+      aimSlider.disabled = true;
 
       if (hit && levelHits >= current.hitsNeeded) {
         lastShot.textContent = level === 0 ? 'Level cleared!' : 'Challenge complete!';
@@ -509,21 +507,22 @@
             levelLabel.textContent = LEVELS[level].label;
             roundProgress.textContent = `Hits to next level: 0 / ${LEVELS[level].hitsNeeded}`;
             lastShot.textContent = 'Quick swerve starts!';
-            throwButton.disabled = false;
+            aimSlider.disabled = false;
           } else {
             finalScore.textContent = score;
             finish.hidden = false;
           }
         }, 950);
       } else {
-        window.setTimeout(() => { throwButton.disabled = false; }, 480);
+        window.setTimeout(() => { aimSlider.disabled = false; }, 480);
       }
     }
 
     function fire() {
-      if (shot || throwButton.disabled || !finish.hidden) return;
+      if (shot || aimSlider.disabled || !finish.hidden) return;
       lastShot.textContent = 'Arrow away…';
       shot = { started: performance.now(), duration: 650, angle: Number(aimSlider.value), hit: false };
+      aimSlider.disabled = true;
       projectile.classList.add('flying');
     }
 
@@ -564,8 +563,11 @@
       requestAnimationFrame(frame);
     }
 
-    throwButton.addEventListener('click', fire);
     aimSlider.addEventListener('input', updateAim);
+    aimSlider.addEventListener('pointerup', fire);
+    aimSlider.addEventListener('keyup', event => {
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(event.key)) fire();
+    });
     target.addEventListener('click', event => { event.preventDefault(); });
     document.querySelector('#replayButton').addEventListener('click', () => {
       window.clearTimeout(transitionTimer);
@@ -581,7 +583,7 @@
       levelLabel.textContent = LEVELS[0].label;
       roundProgress.textContent = `Hits to next level: 0 / ${LEVELS[0].hitsNeeded}`;
       lastShot.textContent = 'Ready';
-      throwButton.disabled = false;
+      aimSlider.disabled = false;
       projectile.classList.remove('flying');
       aimSlider.value = '0';
       updateAim();
