@@ -126,7 +126,7 @@
     .face-target {
       position: absolute;
       z-index: 2;
-      width: clamp(128px, 39vw, 174px);
+      width: clamp(88px, 26vw, 116px);
       aspect-ratio: 1;
       padding: 0;
       overflow: hidden;
@@ -157,11 +157,12 @@
     .aim-line {
       position: absolute;
       z-index: 1;
-      top: 28%;
       bottom: 10%;
       left: 50%;
+      height: 68%;
       border-left: 2px dashed rgba(255,255,255,.23);
-      transform: translateX(-50%);
+      transform: rotate(var(--aim-angle, 0deg));
+      transform-origin: bottom center;
       pointer-events: none;
     }
     .ground {
@@ -253,6 +254,43 @@
       to { opacity: 0; transform: translate(-50%, -26px) scale(.85) rotate(5deg); }
     }
     .controls { flex: none; padding-top: 12px; }
+    .aim-control { padding: 0 2px 3px; }
+    .aim-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: .7rem;
+      font-weight: 850;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .aim-value { color: var(--gold); }
+    .aim-slider {
+      width: 100%;
+      height: 24px;
+      margin: 0;
+      appearance: none;
+      background: transparent;
+      touch-action: pan-x;
+    }
+    .aim-slider::-webkit-slider-runnable-track {
+      height: 7px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--violet), rgba(255,255,255,.55), var(--pink));
+    }
+    .aim-slider::-webkit-slider-thumb {
+      width: 23px;
+      height: 23px;
+      margin-top: -8px;
+      appearance: none;
+      border: 3px solid white;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 2px 12px rgba(0,0,0,.4);
+    }
+    .aim-slider::-moz-range-track { height: 7px; border-radius: 999px; background: linear-gradient(90deg, var(--violet), rgba(255,255,255,.55), var(--pink)); }
+    .aim-slider::-moz-range-thumb { width: 18px; height: 18px; border: 3px solid white; border-radius: 50%; background: var(--gold); }
     .result-row {
       display: flex;
       min-height: 29px;
@@ -361,12 +399,16 @@
         <div class="launcher" aria-hidden="true"></div>
       </section>
       <div class="controls">
+        <div class="aim-control">
+          <label class="aim-label" for="aimSlider"><span>Arrow direction</span><span class="aim-value" id="aimValue">CENTER</span></label>
+          <input class="aim-slider" id="aimSlider" type="range" min="-28" max="28" value="0" step="1" aria-label="Change arrow direction">
+        </div>
         <div class="result-row">
           <span id="roundProgress">Hits to next level: 0 / 3</span>
           <span class="last-shot" id="lastShot" aria-live="polite">Ready</span>
         </div>
         <button class="throw-button" id="throwButton" type="button">🏹 THROW ARROW</button>
-        <p class="instructions">Tap THROW when his face crosses the dotted path.</p>
+        <p class="instructions">Slide to aim, then throw when his face crosses the dotted path.</p>
       </div>
     </div>
     <div class="finish" id="finish" hidden>
@@ -396,6 +438,8 @@
     const roundProgress = document.querySelector('#roundProgress');
     const lastShot = document.querySelector('#lastShot');
     const throwButton = document.querySelector('#throwButton');
+    const aimSlider = document.querySelector('#aimSlider');
+    const aimValue = document.querySelector('#aimValue');
     const finish = document.querySelector('#finish');
     const finalScore = document.querySelector('#finalScore');
     const youtubeLink = document.querySelector('#youtubeLink');
@@ -479,8 +523,15 @@
     function fire() {
       if (shot || throwButton.disabled || !finish.hidden) return;
       lastShot.textContent = 'Arrow away…';
-      shot = { started: performance.now(), duration: 650, hit: false };
+      shot = { started: performance.now(), duration: 650, angle: Number(aimSlider.value), hit: false };
       projectile.classList.add('flying');
+    }
+
+    function updateAim() {
+      const angle = Number(aimSlider.value);
+      aimValue.textContent = angle === 0 ? 'CENTER' : `${Math.abs(angle)}° ${angle < 0 ? 'LEFT' : 'RIGHT'}`;
+      range.style.setProperty('--aim-angle', `${angle}deg`);
+      projectile.style.transform = `translate(-50%, -10%) rotate(${angle}deg)`;
     }
 
     function frame(now) {
@@ -495,10 +546,11 @@
         const progress = Math.min(1, (now - shot.started) / shot.duration);
         const width = range.clientWidth;
         const height = range.clientHeight;
-        const arrowX = width * 0.5;
         const arrowY = height * (0.92 - progress * 0.7);
+        const arrowX = width * 0.5 + Math.tan(shot.angle * Math.PI / 180) * (height * 0.7 * progress);
         projectile.style.left = `${arrowX}px`;
         projectile.style.top = `${arrowY}px`;
+        projectile.style.transform = `translate(-50%, -10%) rotate(${shot.angle}deg)`;
         const faceSize = target.offsetWidth;
         const faceCenterX = width * targetX;
         const faceCenterY = height * targetY;
@@ -513,6 +565,7 @@
     }
 
     throwButton.addEventListener('click', fire);
+    aimSlider.addEventListener('input', updateAim);
     target.addEventListener('click', event => { event.preventDefault(); });
     document.querySelector('#replayButton').addEventListener('click', () => {
       window.clearTimeout(transitionTimer);
@@ -530,9 +583,12 @@
       lastShot.textContent = 'Ready';
       throwButton.disabled = false;
       projectile.classList.remove('flying');
+      aimSlider.value = '0';
+      updateAim();
       finish.hidden = true;
     });
 
+    updateAim();
     requestAnimationFrame(frame);
   </script>
 </body>
