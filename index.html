@@ -140,9 +140,15 @@
     }
     .face-target.hidden { display: none; }
     .face-target.hit { animation: target-hit .32s ease-out; }
+    .face-target.miss { animation: target-miss .42s ease-out; }
     @keyframes target-hit {
       25% { scale: .88; rotate: -7deg; }
       55% { scale: 1.08; rotate: 5deg; }
+    }
+    @keyframes target-miss {
+      20% { rotate: -9deg; }
+      45% { rotate: 8deg; }
+      70% { rotate: -4deg; }
     }
     .face-image {
       position: absolute;
@@ -151,6 +157,7 @@
       width: 154%;
       height: auto;
       opacity: 0;
+      transition: opacity .14s ease-out;
       pointer-events: none;
       -webkit-user-drag: none;
     }
@@ -465,7 +472,6 @@
     let lastFrame = startTime;
     let targetX = 0.5;
     let targetY = 0.28;
-    let nextReaction = 'sad';
     let tapWindowActive = false;
     let roundLocked = false;
     let tapTimer;
@@ -514,7 +520,7 @@
         lastShot.textContent = 'Tap now!';
         tapTimer = window.setTimeout(() => {
           if (tapWindowActive && level === 0) recordRound(false);
-        }, 1500);
+        }, 1000);
       }, 650 + Math.random() * 800);
     }
 
@@ -523,9 +529,7 @@
       roundLocked = true;
       tapWindowActive = false;
       window.clearTimeout(tapTimer);
-      if (level === 0) {
-        target.classList.add('hidden');
-      } else {
+      if (level !== 0) {
         shot = null;
         projectile.classList.remove('flying');
       }
@@ -534,9 +538,9 @@
       if (hit) {
         score += 1;
         levelHits += 1;
-        setMood(nextReaction);
-        nextReaction = nextReaction === 'sad' ? 'evil' : 'sad';
-        target.classList.remove('hit');
+        target.classList.remove('hit', 'miss');
+        target.classList.remove('hidden');
+        setMood('sad');
         void target.offsetWidth;
         target.classList.add('hit');
         window.setTimeout(() => target.classList.remove('hit'), 340);
@@ -544,6 +548,12 @@
         feedback.textContent = '+1 POINT!';
         feedback.className = 'feedback hit';
       } else {
+        target.classList.remove('hit', 'miss');
+        target.classList.remove('hidden');
+        setMood('evil');
+        void target.offsetWidth;
+        target.classList.add('miss');
+        window.setTimeout(() => target.classList.remove('miss'), 440);
         lastShot.textContent = '0 points';
         feedback.textContent = 'MISS · 0';
         feedback.className = 'feedback miss';
@@ -573,10 +583,11 @@
         }, 950);
       } else {
         window.setTimeout(() => {
+          if (level === 0) target.classList.add('hidden');
           roundLocked = false;
           if (level === 0) scheduleTapFace();
           else aimSlider.disabled = false;
-        }, 480);
+        }, level === 0 ? 850 : 480);
       }
     }
 
